@@ -15,7 +15,7 @@ function variantStock(p,color='',size=''){const entries=variantEntries(p);if(!en
 function totalProductStock(p){const e=variantEntries(p);return e.length?e.reduce((s,x)=>s+x.stock,0):Number(p?.stock??0)||0}
 function colorTotal(p,color){return variantEntries(p).filter(x=>x.color===String(color)).reduce((s,x)=>s+x.stock,0)}
 function sizeStockForColor(p,size,color){return variantStock(p,color,size)}
- async function notifyInterest(i){
+async function notifyInterest(i){
   const p=visible[i];
   if(!p)return;
 
