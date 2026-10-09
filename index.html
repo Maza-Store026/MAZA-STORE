@@ -15,7 +15,42 @@ function variantStock(p,color='',size=''){const entries=variantEntries(p);if(!en
 function totalProductStock(p){const e=variantEntries(p);return e.length?e.reduce((s,x)=>s+x.stock,0):Number(p?.stock??0)||0}
 function colorTotal(p,color){return variantEntries(p).filter(x=>x.color===String(color)).reduce((s,x)=>s+x.stock,0)}
 function sizeStockForColor(p,size,color){return variantStock(p,color,size)}
-function renderProducts(){const grid=$('products');const q=$('searchBox').value.trim().toLowerCase(),cat=$('categoryFilter').value;visible=products.filter(p=>p.active!==false&&p.is_active!==false&&(!q||String(p.name||p.product_name||p.title||'').toLowerCase().includes(q))&&(!cat||catName(p.category_id??p.category??p.category_name)===cat));;;grid.innerHTML=visible.map((p,i)=>{const name=p.name||p.product_name||p.title||'',price=Number(p.price||0),old=Number(p.old_price||0),im=images(p)[0],colors=list(p.colors||p.color_options),sizes=list(p.sizes||p.size_options),stock=totalProductStock(p),soldOut=stock<=0;return `<article class="product"><div class="mediaBox">${im?`<img src="${esc(im)}" alt="${esc(name)}">`: '<div class="noimg">MAZA</div>'}${p.badge?`<span class="badge">${esc(p.badge)}</span>`:''}</div><div class="pbody"><div class="pcat">${esc(catName(p.category_id??p.category??p.category_name))}</div><h3>${esc(name)}</h3><div class="price">${price.toLocaleString('fr-DZ')} <small>دج</small>${old>price?`<del>${old.toLocaleString('fr-DZ')} دج</del>`:''}</div><div class="stock">${soldOut?(ar?'نفد المخزون':'Rupture de stock'):(ar?'متوفر':'Disponible')}${stock>=0?' · '+stock:''}</div><button class="buy" ${soldOut?'disabled':''} onclick="openProduct(${i})">${soldOut?(ar?'نفد المخزون':'Rupture'):(colors.length||sizes.length?(ar?'اختيار الخيارات':'Choisir'):(ar?'أضف للسلة':'Ajouter'))}</button></div></article>`}).join('')||'<div class="empty">لا توجد منتجات مطابقة.</div>'}
+ async function notifyInterest(i){
+  const p=visible[i];
+  if(!p)return;
+
+  const stock=totalProductStock(p);
+  if(stock>0){
+    alert(ar?'المنتج متوفر حالياً، تقدر تطلبه الآن.':'Ce produit est disponible.');
+    return;
+  }
+
+  const name=p.name||p.product_name||p.title||p.name_ar||'منتج MAZA';
+  const customerName=prompt(ar?'اسمك (اختياري):':'Votre nom (facultatif):')||'';
+  const phone=prompt(ar?'أدخل رقم هاتفك باش نتواصلو معاك عند توفر المنتج:':'Votre numéro pour être informé de la disponibilité :');
+
+  if(!phone||!phone.trim()){
+    alert(ar?'رقم الهاتف مطلوب.':'Le numéro de téléphone est obligatoire.');
+    return;
+  }
+
+  try{
+    const {data,error}=await supabaseClient.rpc('register_product_interest',{
+      p_product_id:Number(p.id||p.product_id),
+      p_product_name:name,
+      p_customer_name:customerName.trim(),
+      p_phone:phone.trim()
+    });
+
+    if(error)throw error;
+
+    alert(ar
+      ?'تم تسجيل اهتمامك بنجاح ❤️ سنتواصل معك عند توفر المنتج.'
+      :'Votre intérêt a été enregistré. Nous vous contacterons dès que le produit sera disponible.');
+  }catch(e){
+    alert((ar?'تعذر تسجيل اهتمامك: ':'Erreur : ')+(e.message||''));
+  }
+} renderProducts(){const grid=$('products');const q=$('searchBox').value.trim().toLowerCase(),cat=$('categoryFilter').value;visible=products.filter(p=>p.active!==false&&p.is_active!==false&&(!q||String(p.name||p.product_name||p.title||'').toLowerCase().includes(q))&&(!cat||catName(p.category_id??p.category??p.category_name)===cat));;;grid.innerHTML=visible.map((p,i)=>{const name=p.name||p.product_name||p.title||'',price=Number(p.price||0),old=Number(p.old_price||0),im=images(p)[0],colors=list(p.colors||p.color_options),sizes=list(p.sizes||p.size_options),stock=totalProductStock(p),soldOut=stock<=0;return `<article class="product"><div class="mediaBox">${im?`<img src="${esc(im)}" alt="${esc(name)}">`: '<div class="noimg">MAZA</div>'}${p.badge?`<span class="badge">${esc(p.badge)}</span>`:''}</div><div class="pbody"><div class="pcat">${esc(catName(p.category_id??p.category??p.category_name))}</div><h3>${esc(name)}</h3><div class="price">${price.toLocaleString('fr-DZ')} <small>دج</small>${old>price?`<del>${old.toLocaleString('fr-DZ')} دج</del>`:''}</div><div class="stock">${soldOut?(ar?'نفد المخزون':'Rupture de stock'):(ar?'متوفر':'Disponible')}${stock>=0?' · '+stock:''}</div><button class="buy" ${soldOut?'disabled':''} onclick="openProduct(${i})">${soldOut?(ar?'نفد المخزون':'Rupture'):(colors.length||sizes.length?(ar?'اختيار الخيارات':'Choisir'):(ar?'أضف للسلة':'Ajouter'))}</button></div></article>`}).join('')||'<div class="empty">لا توجد منتجات مطابقة.</div>'}
 function openProduct(i){const p=visible[i];if(!p)return;active=p;chosen={color:'',size:'',qty:1};const im=images(p),name=p.name||p.product_name||p.title||'',price=Number(p.price||0),colors=list(p.colors||p.color_options),sizes=list(p.sizes||p.size_options),t=categoryType(catName(p.category_id??p.category??p.category_name)),labs=typeLabels(t),entries=variantEntries(p);$('modal').classList.add('show');$('modalBody').innerHTML=`<div class="detail"><button class="close" onclick="closeModal()">×</button><div class="mainImage"><img id="mainProductImage" src="${esc(im[0]||'')}" alt=""></div><div class="gallery">${im.map(u=>`<button onclick="swapImage('${esc(u)}')"><img src="${esc(u)}"></button>`).join('')}</div><div class="pcat">${esc(catName(p.category_id??p.category??p.category_name))}</div><h2>${esc(name)}</h2><div class="detailPrice">${price.toLocaleString('fr-DZ')} دج</div>${p.description?`<p class="desc">${esc(p.description)}</p>`:''}${colors.length?`<label>${labs[0]}</label><div class="chips" id="colorChips">${colors.map(x=>`<button data-value="${esc(x)}" onclick="chooseChip(this,'color')">${esc(x)}${entries.length&&sizes.length?` <span class="stockChip">(${colorTotal(p,x)})</span>`:''}</button>`).join('')}</div>`:''}${sizes.length?`<label>${labs[1]}</label><div class="chips" id="sizeChips">${sizes.map(x=>`<button data-value="${esc(x)}" onclick="chooseChip(this,'size')">${esc(x)}${entries.length&&!colors.length?` <span class="stockChip">(${variantStock(p,'',x)})</span>`:''}</button>`).join('')}</div>`:''}<div id="availableHint" class="hint" style="margin-top:10px"></div><div class="buyRow"><div class="counter"><button onclick="changeModalQty(-1)">−</button><b id="modalQty">1</b><button onclick="changeModalQty(1)">+</button></div><button id="modalBuy" class="buy" onclick="confirmAdd()">${ar?'أضف للسلة':'Ajouter au panier'}</button></div></div>`;refreshVariantAvailability()}
 let chosen={color:'',size:'',qty:1};
 function chooseChip(el,k){if(el.disabled)return;[...el.parentElement.children].forEach(x=>x.classList.remove('active'));el.classList.add('active');chosen[k]=el.dataset.value||el.textContent.trim().replace(/\s*\(.*\)$/,'');refreshVariantAvailability()}
