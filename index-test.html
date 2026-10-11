@@ -62,19 +62,33 @@ document.addEventListener('DOMContentLoaded',async()=>{fillWilayas();$('lang').o
   const originalRenderProducts = window.renderProducts;
   const originalLoadCategories = window.loadCategories;
 
-  const translations = {
-    'أحذية': 'Chaussures',
-    'احذية': 'Chaussures',
-    'أحذية رياضية': 'Chaussures de sport',
-    'ملابس': 'Vêtements',
-    'عطور': 'Parfums',
-    'إلكترونيات': 'Électronique',
-    'الكترونيات': 'Électronique',
-    'إكسسوارات': 'Accessoires',
-    'اكسسوارات': 'Accessoires',
-    'ساعات': 'Montres',
-    'حقائب': 'Sacs'
-  };
+  
+const translations = {
+  'فئات الأحذية رجال': 'Chaussures homme',
+  'فئات الملابس أطفال': 'Vêtements enfant',
+  'احذية نساء': 'Chaussures femme',
+  'أحذية نساء': 'Chaussures femme',
+  'أحذية رجال': 'Chaussures homme',
+  'أحذية أطفال': 'Chaussures enfant',
+  'ملابس رجال': 'Vêtements homme',
+  'ملابس نساء': 'Vêtements femme',
+  'ملابس أطفال': 'Vêtements enfant',
+  'فئات الأحذية نساء': 'Chaussures femme',
+  'فئات الأحذية أطفال': 'Chaussures enfant',
+  'فئات الملابس رجال': 'Vêtements homme',
+  'فئات الملابس نساء': 'Vêtements femme',
+  'عطور': 'Parfums',
+  'إلكترونيات': 'Électronique',
+  'الكترونيات': 'Électronique',
+  'إكسسوارات': 'Accessoires',
+  'اكسسوارات': 'Accessoires',
+  'ساعات': 'Montres',
+  'حقائب': 'Sacs',
+  'أحذية': 'Chaussures',
+  'احذية': 'Chaussures',
+  'ملابس': 'Vêtements'
+};
+
 
   function prepareProducts() {
     products.forEach(p => {
@@ -105,7 +119,45 @@ document.addEventListener('DOMContentLoaded',async()=>{fillWilayas();$('lang').o
   function translateLabels() {
     const french = !ar;
 
-    const category = $('categoryFilter');
+    const category
+const wilayaNamesFr = [
+  'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi',
+  'Batna', 'Béjaïa', 'Biskra', 'Béchar', 'Blida',
+  'Bouira', 'Tamanrasset', 'Tébessa', 'Tlemcen',
+  'Tiaret', 'Tizi Ouzou', 'Alger', 'Djelfa', 'Jijel',
+  'Sétif', 'Saïda', 'Skikda', 'Sidi Bel Abbès',
+  'Annaba', 'Guelma', 'Constantine', 'Médéa',
+  'Mostaganem', 'M’Sila', 'Mascara', 'Ouargla',
+  'Oran', 'El Bayadh', 'Illizi',
+  'Bordj Bou Arréridj', 'Boumerdès', 'El Tarf',
+  'Tindouf', 'Tissemsilt', 'El Oued', 'Khenchela',
+  'Souk Ahras', 'Tipaza', 'Mila', 'Aïn Defla',
+  'Naâma', 'Aïn Témouchent', 'Ghardaïa', 'Relizane',
+  'Timimoun', 'Bordj Badji Mokhtar', 'Ouled Djellal',
+  'Béni Abbès', 'In Salah', 'In Guezzam', 'Touggourt',
+  'Djanet', 'El M’Ghair', 'El Meniaa', 'Aflou',
+  'Barika', 'El Kantara', 'Bir El Ater', 'El Aricha',
+  'Ksar Chellala', 'Aïn Oussera', 'Messaad',
+  'Ksar El Boukhari', 'Bou Saâda', 'El Abiodh Sidi Cheikh'
+];
+
+const wilayaSelect = $('wilaya');
+
+if (wilayaSelect) {
+  [...wilayaSelect.options].forEach((option, index) => {
+    if (index === 0) {
+      option.textContent = french
+        ? 'Choisir la wilaya'
+        : 'اختر الولاية';
+    } else {
+      const original = WILAYAS[index - 1] || '';
+      option.textContent = french
+        ? `${String(index).padStart(2, '0')} ${wilayaNamesFr[index - 1] || original}`
+        : original;
+    }
+  });
+}
+ = $('categoryFilter');
     if (category && category.options.length) {
       category.options[0].textContent =
         french ? 'Toutes les catégories' : 'كل الفئات';
