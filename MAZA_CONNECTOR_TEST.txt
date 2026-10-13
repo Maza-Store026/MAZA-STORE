@@ -1,0 +1,3 @@
+MAZA STORE — GitHub connector write test
+Created to verify ChatGPT can commit a new independent file.
+This file does not modify the storefront or database.
