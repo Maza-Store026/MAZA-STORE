@@ -39,8 +39,8 @@ jobs:
 
           for (const file of ['index.html', 'MAZA_ADMIN_FINAL.html']) {
             const html = fs.readFileSync(file, 'utf8');
-            const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
-              .filter(([, attrs]) => !/\\bsrc\\s*=/i.test(attrs))
+            const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+              .filter(([, attrs]) => !/\bsrc\s*=/i.test(attrs))
               .map(([, , source]) => source.trim())
               .filter(Boolean);
             if (!scripts.length) throw new Error(file + ': no inline JavaScript found');
@@ -60,11 +60,11 @@ jobs:
           const admin = fs.readFileSync('MAZA_ADMIN_FINAL.html', 'utf8');
           const store = fs.readFileSync('index.html', 'utf8');
           const checks = [
-            ['admin upload rejects more than 12 images', /files\\.length\\s*>\\s*12/.test(admin)],
-            ['admin gallery keeps up to 12 images', /return\\s+a\\.slice\\(0,\\s*12\\)/.test(admin)],
-            ['storefront gallery keeps up to 12 images', /return\\s+a\\.slice\\(0,\\s*12\\)/.test(store)],
-            ['admin image counter shows denominator 12', /\\$\\{imgs\\(p\\)\\.length\\}\\/12/.test(admin)],
-            ['admin per-image limit remains 15 MB', /15\\s*\\*\\s*1024\\s*\\*\\s*1024/.test(admin)],
+            ['admin upload rejects more than 12 images', /files\.length\s*>\s*12/.test(admin)],
+            ['admin gallery keeps up to 12 images', /return\s+a\.slice\(0,\s*12\)/.test(admin)],
+            ['storefront gallery keeps up to 12 images', /return\s+a\.slice\(0,\s*12\)/.test(store)],
+            ['admin image counter shows denominator 12', /\$\{imgs\(p\)\.length\}\/12/.test(admin)],
+            ['admin per-image limit remains 15 MB', /15\s*\*\s*1024\s*\*\s*1024/.test(admin)],
           ];
           for (const [name, ok] of checks) {
             console.log((ok ? 'PASS ' : 'FAIL ') + name);
