@@ -1,0 +1,82 @@
+name: MAZA MFA static checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "MAZA_ADMIN_FINAL.html"
+      - "supabase/migrations/**"
+      - "docs/MAZA_ADMIN_MFA_TEST_PLAN.md"
+      - ".github/workflows/maza-mfa-static-checks.yml"
+  push:
+    branches: [mfa-safe-mainline]
+    paths:
+      - "index.html"
+      - "MAZA_ADMIN_FINAL.html"
+      - "supabase/migrations/**"
+      - "docs/MAZA_ADMIN_MFA_TEST_PLAN.md"
+      - ".github/workflows/maza-mfa-static-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: Parse scripts and verify MFA guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse inline JavaScript
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          for (const file of ['index.html', 'MAZA_ADMIN_FINAL.html']) {
+            const html = fs.readFileSync(file, 'utf8');
+            const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
+              .filter(([, attrs]) => !/\\bsrc\\s*=/i.test(attrs))
+              .map(([, , source]) => source.trim())
+              .filter(Boolean);
+            if (!scripts.length) throw new Error(file + ': no inline JavaScript found');
+            scripts.forEach((source, index) => {
+              try { new Function(source); }
+              catch (error) {
+                throw new Error(file + ': inline script ' + (index + 1) + ' failed to parse: ' + error.message);
+              }
+            });
+            console.log('PASS JavaScript syntax: ' + file);
+          }
+          NODE
+      - name: Verify image limits, MFA UI gates, and migration coverage
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const admin = fs.readFileSync('MAZA_ADMIN_FINAL.html', 'utf8');
+          const store = fs.readFileSync('index.html', 'utf8');
+          const migration = fs.readFileSync('supabase/migrations/20261016000100_require_aal2_for_maza_admin.sql', 'utf8');
+          const policyCount = [...migration.matchAll(/create\\s+policy\\b/gi)].length;
+          const restrictiveCount = [...migration.matchAll(/as\\s+restrictive\\s+for/gi)].length;
+          const bucketScopeCount = [...migration.matchAll(/bucket_id\\s*<>\\s*'maza-media'/g)].length;
+          const checks = [
+            ['admin upload rejects more than 24 images', /files\\.length\\s*>\\s*24/.test(admin)],
+            ['admin gallery caps at 24 images', /return\\s+a\\.slice\\(0,\\s*24\\)/.test(admin)],
+            ['storefront gallery caps at 24 images', /slice\\(0,\\s*24\\)/.test(store)],
+            ['admin image counter displays /24', /\\$\\{imgs\\(p\\)\\.length\\}\\/24/.test(admin)],
+            ['admin per-image size limit remains 25 MB', /25\\s*\\*\\s*1024\\s*\\*\\s*1024/.test(admin)],
+            ['admin UI is restricted to the configured email', /const\\s+MAZA_ADMIN_EMAIL\\s*=\\s*'med\\.mft@gmail\\.com'/.test(admin)],
+            ['only a verified TOTP factor is accepted', /f\\.status\\s*===\\s*'verified'/.test(admin)],
+            ['admin session requires AAL2 and includes MFA setup gating', /currentLevel\\s*===\\s*'aal2'/.test(admin) && /currentLevel\\s*!==\\s*'aal2'/.test(admin) && admin.includes('showMfaSetupOnly') && admin.includes('showAllAdminSections')],
+            ['session restoration is wired', admin.includes('restoreAdminSession();')],
+            ['migration contains 14 restrictive policies', policyCount === 14 && restrictiveCount === 14],
+            ['storage policies preserve other buckets and scope MFA to maza-media', bucketScopeCount === 4],
+          ];
+          for (const [name, ok] of checks) {
+            console.log((ok ? 'PASS ' : 'FAIL ') + name);
+            if (!ok) process.exitCode = 1;
+          }
+          NODE
