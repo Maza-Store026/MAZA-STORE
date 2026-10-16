@@ -2,6 +2,12 @@
 
 > This checklist is for the `mfa-safe-mainline` review branch. Do not apply the staged SQL migration to production until the MFA flow passes.
 
+## Current security status
+- The current production RLS policies for orders, order items, product interests, products, categories, and MAZA media check the administrator email but do not yet require JWT assurance level `aal2`. The staged migration adds that database-side requirement; it has **not** been applied to production.
+- Until the migration is applied and verified, hiding admin sections in the browser is only a UI safeguard, not proof that an AAL1 session cannot call the REST API directly. Do not describe production as fully MFA-protected yet.
+- The storefront must continue showing public product/category listings and public product images. MFA should block private orders, order items, product-interest records, and all admin write operations—not public shopping catalog reads.
+- A review found that the session-restore function was embedded inside a script tag with a `src` attribute, where browsers ignore inline script content. It has been moved into the executable inline script after Supabase client initialization, and CI now checks this wiring.
+
 ## Before testing
 - Use the intended administrator account only.
 - Keep a separate working browser/session for the existing production admin until rollout is complete.
