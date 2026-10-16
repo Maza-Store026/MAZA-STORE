@@ -53,18 +53,21 @@ jobs:
             console.log('PASS JavaScript syntax: ' + file + ' (' + scripts.length + ' inline script(s))');
           }
           NODE
-      - name: Verify 12-image product limit
+      - name: Verify product image limits and storage policy scope
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const admin = fs.readFileSync('MAZA_ADMIN_FINAL.html', 'utf8');
           const store = fs.readFileSync('index.html', 'utf8');
+          const migration = fs.readFileSync('supabase/migrations/20261016000100_require_aal2_for_maza_admin.sql', 'utf8');
+          const bucketScopeCount = [...migration.matchAll(/bucket_id\s*<>\s*'maza-media'/g)].length;
           const checks = [
             ['admin upload rejects more than 12 images', /files\.length\s*>\s*12/.test(admin)],
             ['admin gallery keeps up to 12 images', /return\s+a\.slice\(0,\s*12\)/.test(admin)],
             ['storefront gallery keeps up to 12 images', /return\s+a\.slice\(0,\s*12\)/.test(store)],
             ['admin image counter shows denominator 12', /\$\{imgs\(p\)\.length\}\/12/.test(admin)],
             ['admin per-image limit remains 15 MB', /15\s*\*\s*1024\s*\*\s*1024/.test(admin)],
+            ['all three storage MFA policies are scoped to maza-media without blocking other buckets', bucketScopeCount === 4],
           ];
           for (const [name, ok] of checks) {
             console.log((ok ? 'PASS ' : 'FAIL ') + name);
