@@ -74,7 +74,7 @@ jobs:
             ['Supabase CDN script is a valid closed external script tag', /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>/.test(admin)],
             ['session restoration function is in executable inline script after client initialization', admin.indexOf('async function restoreAdminSession()') > admin.indexOf('const supabaseClient=window.supabase.createClient')],
             ['session restoration is invoked exactly once after event wiring', (admin.match(/restoreAdminSession\(\);/g) || []).length === 1 && admin.lastIndexOf('restoreAdminSession();') > admin.indexOf("$('pMediaFiles').onchange")],
-            ['no secondary session callback bypasses AAL2 restoration', !/supabaseClient\\.auth\\.getSession\\(\\)\\.then\\(async\\(\\{data\\}\\)=>\\{token=data\\.session\\?\\.access_token\\|\\|sessionStorage\\.getItem\\('maza_admin_token'\\);if\\(token\\)\\{showApp\\(\\);try\\{await boot\\(\\)\\}/.test(admin)],
+            ['no secondary session callback bypasses AAL2 restoration', !admin.includes("supabaseClient.auth.getSession().then(async({data})=>{token=data.session?.access_token||sessionStorage.getItem('maza_admin_token');if(token){showApp();try{await boot()}")],
 
             ['no secondary session callback bypasses AAL2 restoration', !/supabaseClient\.auth\.getSession\(\)\.then\(async\(\{data\}\)=>\{token=data\.session\?\.access_token\|\|sessionStorage\.getItem\('maza_admin_token'\);if\(token\)\{showApp\(\);try\{await boot\(\)\}/.test(admin)],
             ['migration contains 14 restrictive policies', policyCount === 14 && restrictiveCount === 14],
