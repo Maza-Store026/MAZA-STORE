@@ -72,6 +72,7 @@ jobs:
             ['only a verified TOTP factor is accepted', /f\.status\s*===\s*'verified'/.test(admin)],
             ['admin session requires AAL2 and includes MFA setup gating', /currentLevel\s*===\s*'aal2'/.test(admin) && /currentLevel\s*!==\s*'aal2'/.test(admin) && admin.includes('showMfaSetupOnly') && admin.includes('showAllAdminSections')],
             ['session restoration is wired', admin.includes('restoreAdminSession();')],
+            ['no secondary session callback bypasses AAL2 restoration', !/supabaseClient\.auth\.getSession\(\)\.then\(async\(\{data\}\)=>\{token=data\.session\?\.access_token\|\|sessionStorage\.getItem\('maza_admin_token'\);if\(token\)\{showApp\(\);try\{await boot\(\)\}/.test(admin)],
             ['migration contains 14 restrictive policies', policyCount === 14 && restrictiveCount === 14],
             ['storage policies preserve other buckets and scope MFA to maza-media', bucketScopeCount === 4],
           ];
