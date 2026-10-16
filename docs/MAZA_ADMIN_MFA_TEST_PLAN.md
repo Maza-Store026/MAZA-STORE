@@ -31,9 +31,9 @@
 - [ ] Read and update product-interest status.
 - [ ] Add/edit/delete a test product and verify data persists.
 - [ ] Add/edit/delete a test category and verify data persists.
-- [ ] Upload up to 6 test images; verify the 7th image is rejected and each image above 15 MB is rejected.
+- [ ] Upload up to 12 test images; verify the 13th image is rejected and each image above 15 MB is rejected.
 - [ ] Verify public storefront product/category reads and public image URLs still work.
-- [ ] Confirm the original six-image limit and product variant stock behavior remain intact.
+- [ ] Confirm the 12-image limit and product variant stock behavior remain intact.
 
 ## Database policy verification
 After the migration is reviewed and applied to a test environment:
