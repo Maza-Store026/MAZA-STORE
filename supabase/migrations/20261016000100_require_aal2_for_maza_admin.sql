@@ -68,19 +68,32 @@ create policy "MAZA require AAL2 to delete categories"
   on public.categories as restrictive for delete to authenticated
   using ((select auth.jwt() ->> 'aal') = 'aal2');
 
--- Media: keep public image delivery unchanged, but require AAL2 for object writes.
+-- Media: only writes to the MAZA media bucket require AAL2.
+-- Other buckets retain their existing policies and behavior.
 drop policy if exists "MAZA require AAL2 to upload media" on storage.objects;
 create policy "MAZA require AAL2 to upload media"
   on storage.objects as restrictive for insert to authenticated
-  with check ((select auth.jwt() ->> 'aal') = 'aal2');
+  with check (
+    bucket_id <> 'maza-media'
+    or (select auth.jwt() ->> 'aal') = 'aal2'
+  );
 
 drop policy if exists "MAZA require AAL2 to update media" on storage.objects;
 create policy "MAZA require AAL2 to update media"
   on storage.objects as restrictive for update to authenticated
-  using ((select auth.jwt() ->> 'aal') = 'aal2')
-  with check ((select auth.jwt() ->> 'aal') = 'aal2');
+  using (
+    bucket_id <> 'maza-media'
+    or (select auth.jwt() ->> 'aal') = 'aal2'
+  )
+  with check (
+    bucket_id <> 'maza-media'
+    or (select auth.jwt() ->> 'aal') = 'aal2'
+  );
 
 drop policy if exists "MAZA require AAL2 to delete media" on storage.objects;
 create policy "MAZA require AAL2 to delete media"
   on storage.objects as restrictive for delete to authenticated
-  using ((select auth.jwt() ->> 'aal') = 'aal2');
+  using (
+    bucket_id <> 'maza-media'
+    or (select auth.jwt() ->> 'aal') = 'aal2'
+  );
