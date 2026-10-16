@@ -197,4 +197,42 @@ function updateCommunes(){
 async function submitOrder(e){e.preventDefault();if(!cart.length){$('formMsg').textContent=ar?'السلة فارغة':'Le panier est vide';return}const btn=$('confirm');btn.disabled=true;try{const total=cart.reduce((s,i)=>s+i.price*i.q,0);const items=cart.map(i=>({product_id:Number(i.id),product_name:(String(i.name??'').trim()||'منتج MAZA')+(i.color?' | '+(ar?'اللون: ':'Couleur : ')+i.color:'')+(i.size?' | '+(ar?'الخيار: ':'Option : ')+i.size:''),color:i.color||'',size:i.size||'',quantity:i.q,price:i.price}));const {error}=await supabaseClient.rpc('create_maza_order',{p_customer_name:$('name').value.trim(),p_phone:$('phone').value.trim(),p_wilaya:$('wilaya').value,p_commune:$('commune').value,p_address:$('address').value.trim(),p_total:total,p_items:items});if(error)throw error;$('formMsg').textContent=ar?'تم تسجيل طلبك بنجاح في MAZA STORE ✅':'Commande enregistrée avec succès ✅';cart=[];renderCart();e.target.reset();$('commune').innerHTML='<option value="">'+(ar?'اختر البلدية':'Choisir la commune')+'</option>'}catch(err){$('formMsg').textContent=(ar?'تعذر تسجيل الطلب: ':'Erreur: ')+(err.message||'')}finally{btn.disabled=false}}
 function toggleLang(){ar=!ar;document.documentElement.lang=ar?'ar':'fr';document.documentElement.dir=ar?'rtl':'ltr';$('lang').textContent=ar?'FR':'AR';$('heroTag').textContent=ar?'اختيارات عصرية، بلمسة MAZA':'Sélections modernes, avec la touche MAZA';$('heroBtn').textContent=ar?'اكتشف المجموعة':'Découvrir la collection';$('sectionTitle').textContent=ar?'منتجات مختارة':'Sélection MAZA';$('searchBox').placeholder=ar?'ابحث عن منتج...':'Rechercher un produit...';$('cartTitle').textContent=ar?'سلة المشتريات':'Panier';$('orderTitle').textContent=ar?'أكمل طلبك':'Finaliser la commande';$('name').placeholder=ar?'الاسم الكامل':'Nom complet';$('phone').placeholder=ar?'رقم الهاتف':'Numéro de téléphone';$('address').placeholder=ar?'العنوان':'Adresse';$('confirm').textContent=ar?'تأكيد الطلب — الدفع عند الاستلام':'Confirmer la commande — paiement à la livraison';const cs=$('categoryFilter');if(cs){const old=cs.value;cs.innerHTML=`<option value="">${ar?'كل الفئات':'Toutes les catégories'}</option>`+categories.map(c=>{const n=c.category_name??c.name_ar??c.title??c.label??c.name??'';return n?`<option value="${esc(n)}">${esc(ar?n:(c.name_fr||c.category_name_fr||FR_CATEGORIES[n]||n))}</option>`:''}).join('');cs.value=old;}fillWilayas();renderProducts();updateCommunes();renderCart()}
 document.addEventListener('DOMContentLoaded',async()=>{fillWilayas();$('lang').onclick=toggleLang;$('searchBox').oninput=renderProducts;$('categoryFilter').onchange=renderProducts;$('wilaya').onchange=updateCommunes;$('orderForm').onsubmit=submitOrder;$('cartBtn').onclick=openCart;$('closeCart').onclick=closeCart;$('heroBtn').onclick=()=>$('productsSection').scrollIntoView({behavior:'smooth'});$('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};await loadCategories();await loadCommunes();await loadProducts();renderCart();setInterval(()=>{if(document.visibilityState==='visible')loadProducts()},30000)});
-</script></body></html>
+</script>
+<style id="maza-gold-bright-refinement">
+/* Brighter MAZA preview: warm white background, gold accents and gold frames */
+:root{--maza-ink:#26231d;--maza-muted:#706b60;--maza-olive:#b69a5d;--maza-olive-dark:#9b7a3d;--maza-gold:#b69a5d;--maza-paper:#fffdf8;--maza-card:#fff;--maza-line:#cdb982;color-scheme:light}
+html,body{background:#fffdf8!important;color:#26231d}
+body{background:linear-gradient(180deg,#fffefa 0%,#fffdf8 58%,#fbf7ed 100%)!important}
+.top{background:rgba(255,254,250,.97);border-bottom:1px solid #c6a968;box-shadow:0 4px 18px #b69a5d12}
+.brand{color:#26231d}.brand:after{color:#a88948}
+.mini,.input,.form input,.form select{background:#fff;color:#26231d;border:1px solid #c6a968}
+.mini:hover{background:#fbf5e7;border-color:#a98b4f}.count{background:#b69a5d;color:#fff}
+.hero{background:radial-gradient(ellipse at 78% 20%,#ead9ad66,transparent 31%),radial-gradient(ellipse at 82% 90%,#b69a5d20,transparent 35%),linear-gradient(125deg,#fffefa 0%,#fff9eb 53%,#f7efd9 100%);border:1.5px solid #b69a5d;box-shadow:0 18px 42px #b69a5d14}
+.hero:before{background:linear-gradient(115deg,transparent 20%,#b69a5d14 48%,transparent 70%)}
+.heroArt{background:radial-gradient(ellipse at 76% 66%,#c8aa6330 0 10%,transparent 38%),repeating-linear-gradient(135deg,#fff0 0 10px,#b69a5d0a 11px 12px)}
+.eyebrow,.edit,.pcat,.galleryCount{color:#9b7a3d}
+.hero h1,.sectionHead h2,.product h3,.order h2{color:#26231d}.hero p{color:#625b4d}
+.gold,.buy{background:linear-gradient(135deg,#d8c18a,#b69a5d);color:#292317;border:1px solid #a98b4f;box-shadow:0 6px 16px #b69a5d24}
+.gold:hover,.buy:hover:not(:disabled){background:linear-gradient(135deg,#e4d3a7,#c2a66b);border-color:#94733a}
+.input:focus,.form input:focus,.form select:focus{border-color:#a88948;box-shadow:0 0 0 3px #b69a5d22;outline:none}
+.product{background:#fff;border:1.5px solid #cdb982;box-shadow:0 7px 22px #b69a5d12}
+.product:hover{border-color:#a88948;box-shadow:0 12px 28px #b69a5d20}
+.mediaBox{background:#fbf8f0}.badge{background:#f5ebd2;color:#6e5524;border:1px solid #cdb982}
+.price{color:#40331c}.price small,.stock{color:#706b60}
+.order{background:#fff;border:1.5px solid #cdb982;box-shadow:0 10px 30px #b69a5d10}
+.form input,.form select{background:#fffdf8}.formMsg{color:#80652f}
+.drawerBox{background:#fffdf8;color:#26231d;border-right:1.5px solid #c6a968}
+.drawerHead .close,.close{background:#f8f0dd;color:#3a2d15;border:1px solid #cdb982}
+.cartItem{border-bottom-color:#e7dcc1}.q button{background:#f8f0dd;color:#332918;border:1px solid #cdb982}
+.total{color:#4b3b1b}.detail{background:#fffefa;color:#26231d;border:1.5px solid #c6a968;box-shadow:0 20px 70px #3d30151c}
+.mainImage{background:#fbf8f0;border-color:#cdb982}
+.gallery button{background:#fbf8f0;border-color:#e5d8b8}.gallery button.active{border-color:#b69a5d;box-shadow:0 0 0 2px #b69a5d30}
+.detail h2{color:#26231d}.detailPrice{color:#987536}.desc{color:#625b4d}.detail label{color:#725827}
+.chips button{background:#fffaf0;color:#393022;border-color:#d9c99e}
+.chips button.active{background:#d8c18a;color:#292317;border-color:#a88948;box-shadow:0 0 0 2px #b69a5d25}
+.chips button:disabled{opacity:.42}.buyRow{border-top-color:#e4d5b1}
+.counter{background:#fffaf0;border:1px solid #d9c99e;color:#26231d}.counter button{color:#393022}
+.buy:disabled{background:#eee9dc;color:#9c9587;border-color:#d8cfba}
+@media(max-width:600px){.buyRow{background:#fffdf8f5;border-top:1px solid #cdb982}}
+</style>
+</body></html>
