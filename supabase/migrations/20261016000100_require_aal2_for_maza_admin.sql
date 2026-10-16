@@ -68,7 +68,16 @@ create policy "MAZA require AAL2 to delete categories"
   on public.categories as restrictive for delete to authenticated
   using ((select auth.jwt() ->> 'aal') = 'aal2');
 
--- Media: only writes to the MAZA media bucket require AAL2.
+-- Media metadata is admin-only in the existing policy set, so require AAL2 for it too.
+drop policy if exists "MAZA require AAL2 to read media metadata" on storage.objects;
+create policy "MAZA require AAL2 to read media metadata"
+  on storage.objects as restrictive for select to authenticated
+  using (
+    bucket_id <> 'maza-media'
+    or (select auth.jwt() ->> 'aal') = 'aal2'
+  );
+
+-- Only writes to the MAZA media bucket require AAL2.
 -- Other buckets retain their existing policies and behavior.
 drop policy if exists "MAZA require AAL2 to upload media" on storage.objects;
 create policy "MAZA require AAL2 to upload media"
