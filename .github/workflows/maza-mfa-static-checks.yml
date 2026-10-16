@@ -71,7 +71,11 @@ jobs:
             ['admin UI is restricted to the configured email', /const\s+MAZA_ADMIN_EMAIL\s*=\s*'med\.mft@gmail\.com'/.test(admin)],
             ['only a verified TOTP factor is accepted', /f\.status\s*===\s*'verified'/.test(admin)],
             ['admin session requires AAL2 and includes MFA setup gating', /currentLevel\s*===\s*'aal2'/.test(admin) && /currentLevel\s*!==\s*'aal2'/.test(admin) && admin.includes('showMfaSetupOnly') && admin.includes('showAllAdminSections')],
-            ['session restoration is wired', admin.includes('restoreAdminSession();')],
+            ['Supabase CDN script is a valid closed external script tag', /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>/.test(admin)],
+            ['session restoration function is in executable inline script after client initialization', admin.indexOf('async function restoreAdminSession()') > admin.indexOf('const supabaseClient=window.supabase.createClient')],
+            ['session restoration is invoked exactly once after event wiring', (admin.match(/restoreAdminSession\(\);/g) || []).length === 1 && admin.lastIndexOf('restoreAdminSession();') > admin.indexOf("$('pMediaFiles').onchange")],
+            ['no secondary session callback bypasses AAL2 restoration', !/supabaseClient\\.auth\\.getSession\\(\\)\\.then\\(async\\(\\{data\\}\\)=>\\{token=data\\.session\\?\\.access_token\\|\\|sessionStorage\\.getItem\\('maza_admin_token'\\);if\\(token\\)\\{showApp\\(\\);try\\{await boot\\(\\)\\}/.test(admin)],
+
             ['no secondary session callback bypasses AAL2 restoration', !/supabaseClient\.auth\.getSession\(\)\.then\(async\(\{data\}\)=>\{token=data\.session\?\.access_token\|\|sessionStorage\.getItem\('maza_admin_token'\);if\(token\)\{showApp\(\);try\{await boot\(\)\}/.test(admin)],
             ['migration contains 14 restrictive policies', policyCount === 14 && restrictiveCount === 14],
             ['storage policies preserve other buckets and scope MFA to maza-media', bucketScopeCount === 4],
