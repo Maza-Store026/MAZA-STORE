@@ -1,6 +1,6 @@
 # MAZA Admin MFA rollout test plan
 
-> This checklist is for the `secure-maza-admin-mfa` branch. Do not apply the staged SQL migration to production until the MFA flow passes.
+> This checklist is for the `mfa-safe-mainline` review branch. Do not apply the staged SQL migration to production until the MFA flow passes.
 
 ## Before testing
 - Use the intended administrator account only.
@@ -31,7 +31,7 @@
 - [ ] Read and update product-interest status.
 - [ ] Add/edit/delete a test product and verify data persists.
 - [ ] Add/edit/delete a test category and verify data persists.
-- [ ] Upload up to 24 test images; verify the 25th image is rejected and each image above 25 MB is rejected. Confirm all 12 images can be viewed in the storefront product gallery.
+- [ ] Upload up to 24 test images; verify the 25th image is rejected and each image above 25 MB is rejected. Confirm all 24 images can be viewed in the storefront product gallery.
 - [ ] Verify public storefront product/category reads and public image URLs still work.
 - [ ] Confirm the 24-image limit and product variant stock behavior remain intact.
 
