@@ -3,7 +3,7 @@ const SUPABASE_URL="https://lrgrbzpmahmhetuhbrvb.supabase.co",SUPABASE_KEY="sb_p
 let ar=true,products=[],categories=[],categoryMap={},visible=[],cart=[],active=null,communes=[];
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 function list(v){if(Array.isArray(v))return v.map(String).filter(Boolean);if(v==null||v==='')return[];try{const j=JSON.parse(v);if(Array.isArray(j))return j.map(String).filter(Boolean)}catch{}return String(v).split(/[|,،\n]+/).map(x=>x.trim()).filter(Boolean)}
-function images(p){let a=list(p.images||p.image_urls||p.gallery||p.photos||p.media);if(!a.length&&p.image_url)a=[p.image_url];if(!a.length&&p.image)a=[p.image];return a.slice(0,6)}
+function images(p){let a=list(p.images||p.image_urls||p.gallery||p.photos||p.media);if(!a.length&&p.image_url)a=[p.image_url];if(!a.length&&p.image)a=[p.image];return a.slice(0,12)}
 function catName(v){return categoryMap[String(v)]||String(v||'')}
 function categoryType(n){const s=String(n||'').toLowerCase();if(/حذاء|أحذية|chaussure|shoe/.test(s))return'shoes';if(/ملابس|vêtement|vetement|clothing|clothes/.test(s))return'clothes';if(/عطر|عطور|parfum|perfume|fragrance/.test(s))return'perfume';if(/إلكترون|الكترون|électron|electron|electronic|ساعة|montre|watch/.test(s))return'electronics';return'general'}
 function typeLabels(t){return t==='shoes'?['اللون','المقاس']:t==='clothes'?['اللون','المقاس']:t==='perfume'?['الرائحة','السعة']:t==='electronics'?['اللون','الخيارات']:['اللون','الخيارات']}
