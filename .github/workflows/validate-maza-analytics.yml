@@ -23,8 +23,8 @@ jobs:
           let failed = false;
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
-            const scripts = [...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)]
-              .filter(([, attrs, body]) => !/\\bsrc\\s*=/.test(attrs) && body.trim());
+            const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+              .filter(([, attrs, body]) => !/\bsrc\s*=/.test(attrs) && body.trim());
             if (!scripts.length) {
               console.error('FAIL ' + file + ': no inline scripts found');
               failed = true;
