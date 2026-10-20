@@ -48,9 +48,12 @@ async function loadAnalytics(){
  const msg=$('analyticsMsg');msg.textContent='جاري تحميل التحليلات...';
  try{
   const days=Math.max(1,Math.min(30,Number($('analyticsPeriod').value)||7));
-  const from=new Date(Date.now()-days*86400000).toISOString();
-  const ev=await api('/rest/v1/maza_analytics_events?select=session_id,event_name,product_id,page_path,source,campaign,created_at&created_at=gte.'+encodeURIComponent(from)+'&order=created_at.desc&limit=10000');
-  const ord=await api('/rest/v1/orders?select=id,status,created_at&created_at=gte.'+encodeURIComponent(from)+'&limit=10000');
+  const periodFrom=new Date(Date.now()-days*86400000).toISOString();
+  const weeklyFrom=new Date(Date.now()-7*86400000).toISOString();
+  const queryFrom=new Date(Date.now()-30*86400000).toISOString();
+  const allEv=await api('/rest/v1/maza_analytics_events?select=session_id,event_name,product_id,page_path,source,campaign,created_at&created_at=gte.'+encodeURIComponent(queryFrom)+'&order=created_at.desc&limit=10000');
+  const allOrd=await api('/rest/v1/orders?select=id,status,created_at&created_at=gte.'+encodeURIComponent(queryFrom)+'&limit=10000');
+  const ev=allEv.filter(e=>e.created_at>=periodFrom), ord=allOrd.filter(o=>o.created_at>=periodFrom);
   const page=ev.filter(e=>e.event_name==='page_view'), prod=ev.filter(e=>e.event_name==='product_view'), sessions=new Set(ev.map(e=>e.session_id));
   $('anPageViews').textContent=page.length.toLocaleString('fr-DZ');$('anVisitors').textContent=sessions.size.toLocaleString('fr-DZ');$('anProductViews').textContent=prod.length.toLocaleString('fr-DZ');$('anOrders').textContent=ord.length.toLocaleString('fr-DZ');
   const hours={};for(const e of page){const d=new Date(e.created_at);const hour=d.toLocaleTimeString('en-GB',{hour:'2-digit',hour12:false});hours[hour]=(hours[hour]||0)+1}
@@ -60,7 +63,7 @@ async function loadAnalytics(){
   $('anSources').innerHTML=Object.entries(sources).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([s,n])=>'<div class="anLine"><span>'+esc(s)+'</span><b>'+n+'</b></div>').join('')||'لا توجد بيانات بعد.';
   const counts={};for(const e of prod){const k=String(e.product_id||'غير محدد');counts[k]=(counts[k]||0)+1}
   $('anProducts').innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,n])=>{const p=products.find(x=>String(val(x,productSchema.id))===id);return '<div class="anLine"><span>'+esc(p?pname(p):'منتج #'+id)+'</span><b>'+n+'</b></div>'}).join('')||'لا توجد مشاهدات منتجات بعد.';
-  const weeklyFrom=new Date(Date.now()-7*86400000).toISOString();const wEv=ev.filter(e=>e.created_at>=weeklyFrom);const wOrd=ord.filter(o=>o.created_at>=weeklyFrom);
+  const wEv=allEv.filter(e=>e.created_at>=weeklyFrom);const wOrd=allOrd.filter(o=>o.created_at>=weeklyFrom);
   $('anWeeklyReport').innerHTML='<div class="anLine"><span>زيارات خلال 7 أيام</span><b>'+wEv.filter(e=>e.event_name==='page_view').length+'</b></div><div class="anLine"><span>مشاهدات منتجات</span><b>'+wEv.filter(e=>e.event_name==='product_view').length+'</b></div><div class="anLine"><span>طلبات مسجلة</span><b>'+wOrd.length+'</b></div><div class="anLine"><span>أكثر مصدر</span><b>'+esc(Object.entries(Object.fromEntries(Object.entries(wEv.filter(e=>e.event_name==='page_view').reduce((a,e)=>{const k=e.source||'غير معروف';a[k]=(a[k]||0)+1;return a},{}))).sort((a,b)=>b[1]-a[1])[0]||['—',0])[0])+'</b></div>';
   msg.textContent='تم تحديث التحليلات. هذه أرقام الزيارات المسجلة بعد موافقة الزوار فقط؛ وقد تختلف عن Google Analytics أو تقارير منصات الإعلان.';
  }catch(e){msg.textContent='تعذر تحميل التحليلات: '+(e.message||'خطأ غير معروف')+' — تأكد من صلاحيات الجدول.'}
