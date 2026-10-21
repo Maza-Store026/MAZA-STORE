@@ -78,6 +78,17 @@ jobs:
               failed = true;
             }
           }
+          // Ensure purchase events are placed around the real order RPC, not merely present as strings.
+          const submitStart = store.indexOf('async function submitOrder(');
+          const submitEnd = store.indexOf('\nfunction toggleLang', submitStart);
+          const submitBlock = submitStart >= 0 && submitEnd > submitStart ? store.slice(submitStart, submitEnd) : '';
+          const rpcPos = submitBlock.indexOf("supabaseClient.rpc('create_maza_order'");
+          const checkoutPos = submitBlock.indexOf("mazaTrack('checkout_start')");
+          const successPos = submitBlock.indexOf("mazaTrack('order_success')");
+          if (!submitBlock || rpcPos < 0 || checkoutPos < 0 || successPos < 0 || !(checkoutPos < rpcPos && rpcPos < successPos)) {
+            console.error('FAIL order analytics must record checkout before the order RPC and success only after it');
+            failed = true;
+          }
           if (failed) process.exit(1);
-          console.log('PASS required analytics hooks and privacy guardrails are present');
+          console.log('PASS required analytics hooks, privacy guardrails, and order-event placement are present');
           NODE
