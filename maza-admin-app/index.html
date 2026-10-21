@@ -60,7 +60,7 @@ async function loadAnalytics(){
   const statusLabels={new:'جديد',pending:'قيد المعالجة',confirmed:'مؤكد',shipping:'قيد التوصيل',shipped:'قيد التوصيل',completed:'مكتمل',delivered:'تم التسليم',cancelled:'ملغى',canceled:'ملغى'};
   const statusCounts={};for(const o of ord){const k=String(o.status||'غير محدد').toLowerCase();statusCounts[k]=(statusCounts[k]||0)+1}
   $('anOrderStatuses').innerHTML=Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([k,n])=>'<div class="anLine"><span>'+esc(statusLabels[k]||k)+'</span><b>'+n+'</b></div>').join('')||'لا توجد طلبات في هذه الفترة.';
-  const phoneCounts={};for(const o of ord){const phone=String(o.phone||'').replace(/\\D/g,'');if(phone.length>=8)phoneCounts[phone]=(phoneCounts[phone]||0)+1}
+  const phoneCounts={};for(const o of ord){const phone=String(o.phone||'').replace(/\D/g,'');if(phone.length>=8)phoneCounts[phone]=(phoneCounts[phone]||0)+1}
   const repeatPhones=Object.values(phoneCounts).filter(n=>n>1).length;
   $('anReturning').innerHTML='<div class="anLine"><span>أرقام هاتف لها أكثر من طلب خلال الفترة</span><b>'+repeatPhones+'</b></div><div class="hint">مؤشر تقريبي يعتمد على رقم الهاتف؛ قد لا يطابق عدد الأشخاص بدقة.</div>';
 
@@ -81,7 +81,7 @@ async function loadAnalytics(){
   $('anFunnel').innerHTML=[['مشاهدات الصفحات',funnelCounts.page_view,'—'],['مشاهدات المنتجات',funnelCounts.product_view,pct(funnelCounts.product_view,funnelCounts.page_view)],['إضافة للسلة',funnelCounts.add_to_cart,pct(funnelCounts.add_to_cart,funnelCounts.product_view)],['بدء إتمام الطلب',funnelCounts.checkout_start,pct(funnelCounts.checkout_start,funnelCounts.add_to_cart)],['نجاح إرسال الطلب',funnelCounts.order_success,pct(funnelCounts.order_success,funnelCounts.checkout_start)]].map(([label,n,rate])=>'<div class="anLine"><span>'+label+'</span><b>'+n+' <small style="color:#777">'+rate+'</small></b></div>').join('');
   const wEv=allEv.filter(e=>e.created_at>=weeklyFrom);const wOrd=allOrd.filter(o=>o.created_at>=weeklyFrom);
   $('anWeeklyReport').innerHTML='<div class="anLine"><span>زيارات خلال 7 أيام</span><b>'+wEv.filter(e=>e.event_name==='page_view').length+'</b></div><div class="anLine"><span>مشاهدات منتجات</span><b>'+wEv.filter(e=>e.event_name==='product_view').length+'</b></div><div class="anLine"><span>طلبات مسجلة</span><b>'+wOrd.length+'</b></div><div class="anLine"><span>أكثر مصدر</span><b>'+esc(Object.entries(Object.fromEntries(Object.entries(wEv.filter(e=>e.event_name==='page_view').reduce((a,e)=>{const k=e.source||'غير معروف';a[k]=(a[k]||0)+1;return a},{}))).sort((a,b)=>b[1]-a[1])[0]||['—',0])[0])+'</b></div>';
-  msg.textContent='تم تحديث التحليلات. هذه أرقام الزيارات المسجلة بعد موافقة الزوار فقط؛ وقد تختلف عن Google Analytics أو تقارير منصات الإعلان.';
+  msg.textContent='تم تحديث التحليلات. الأرقام تخص الأحداث التي سجلها المتجر فقط؛ وقد تختلف عن Google Analytics أو تقارير منصات الإعلان. المعرّف مؤقت داخل فتح الصفحة، لذلك عدد الزوار الفريدين ومسار الشراء تقديري ولا يربط الزيارات بعد إعادة التحميل.';
  }catch(e){msg.textContent='تعذر تحميل التحليلات: '+(e.message||'خطأ غير معروف')+' — تأكد من صلاحيات الجدول.'}
 }
 async function boot(){await Promise.all([loadOrders(),loadCategories(),loadProducts(),loadInterests()]);await loadAnalytics();}
