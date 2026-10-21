@@ -171,7 +171,7 @@ async function deleteOrderSecure(id){
   }
 }
 async function setStatus(id,status){const msg=$('orderMsg');if(msg)msg.textContent='⏳ جارٍ تحديث حالة الطلب #'+id+'...';if(!confirm('تغيير حالة الطلب #'+id+' إلى '+status+'؟')){if(msg)msg.textContent='تم إلغاء تغيير الحالة.';return}try{await api('/rest/v1/orders?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status})});if(msg)msg.textContent='✅ تم تحديث حالة الطلب #'+id+' إلى '+status;await loadOrders()}catch(e){if(msg)msg.textContent='❌ تعذر تحديث الحالة: '+(e.message||'خطأ غير معروف');alert('❌ تعذر تحديث الحالة: '+(e.message||'خطأ غير معروف'))}}
-window.setStatus=setStatus;
+window.toggleOrderSelection=toggleOrderSelection;window.toggleInterestSelection=toggleInterestSelection;window.setStatus=setStatus;
 window.deleteOrderSecure=deleteOrderSecure;
 window.deleteOrderIdsSecure=deleteOrderIdsSecure;
 {const b=document.getElementById('deleteSelectedOrders');if(b)b.addEventListener('click',()=>deleteOrderIdsSecure([...selectedOrderIds]));}
