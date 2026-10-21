@@ -52,7 +52,7 @@ async function loadAnalytics(){
   const weeklyFrom=new Date(Date.now()-7*86400000).toISOString();
   const queryFrom=new Date(Date.now()-30*86400000).toISOString();
   const allEv=await api('/rest/v1/maza_analytics_events?select=session_id,event_name,product_id,page_path,source,campaign,created_at&created_at=gte.'+encodeURIComponent(queryFrom)+'&order=created_at.desc&limit=10000');
-  const allOrd=await api('/rest/v1/orders?select=id,status,created_at&created_at=gte.'+encodeURIComponent(queryFrom)+'&limit=10000');
+  const allOrd=await api('/rest/v1/orders?select=id,status,created_at,phone&created_at=gte.'+encodeURIComponent(queryFrom)+'&limit=10000');
   const ev=allEv.filter(e=>e.created_at>=periodFrom), ord=allOrd.filter(o=>o.created_at>=periodFrom);
   const page=ev.filter(e=>e.event_name==='page_view'), prod=ev.filter(e=>e.event_name==='product_view'), sessions=new Set(ev.map(e=>e.session_id));
   const funnelCounts={page_view:page.length,product_view:prod.length,add_to_cart:ev.filter(e=>e.event_name==='add_to_cart').length,checkout_start:ev.filter(e=>e.event_name==='checkout_start').length,order_success:ev.filter(e=>e.event_name==='order_success').length};
@@ -60,6 +60,10 @@ async function loadAnalytics(){
   const statusLabels={new:'جديد',pending:'قيد المعالجة',confirmed:'مؤكد',shipping:'قيد التوصيل',shipped:'قيد التوصيل',completed:'مكتمل',delivered:'تم التسليم',cancelled:'ملغى',canceled:'ملغى'};
   const statusCounts={};for(const o of ord){const k=String(o.status||'غير محدد').toLowerCase();statusCounts[k]=(statusCounts[k]||0)+1}
   $('anOrderStatuses').innerHTML=Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([k,n])=>'<div class="anLine"><span>'+esc(statusLabels[k]||k)+'</span><b>'+n+'</b></div>').join('')||'لا توجد طلبات في هذه الفترة.';
+  const phoneCounts={};for(const o of ord){const phone=String(o.phone||'').replace(/\\D/g,'');if(phone.length>=8)phoneCounts[phone]=(phoneCounts[phone]||0)+1}
+  const repeatPhones=Object.values(phoneCounts).filter(n=>n>1).length;
+  $('anReturning').innerHTML='<div class="anLine"><span>أرقام هاتف لها أكثر من طلب خلال الفترة</span><b>'+repeatPhones+'</b></div><div class="hint">مؤشر تقريبي يعتمد على رقم الهاتف؛ قد لا يطابق عدد الأشخاص بدقة.</div>';
+
 
   const hours={};for(const e of page){const d=new Date(e.created_at);const hour=d.toLocaleTimeString('en-GB',{hour:'2-digit',hour12:false});hours[hour]=(hours[hour]||0)+1}
   const topHours=Object.entries(hours).sort((a,b)=>b[1]-a[1]).slice(0,3);
