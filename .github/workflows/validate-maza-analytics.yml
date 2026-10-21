@@ -1,0 +1,59 @@
+name: Validate MAZA analytics
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/maza-analytics]
+
+jobs:
+  validate-html-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check inline JavaScript syntax and analytics hooks
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const files = ['index.html', 'maza-admin-app/index.html'];
+          let failed = false;
+          for (const file of files) {
+            const html = fs.readFileSync(file, 'utf8');
+            const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+              .filter(([, attrs, body]) => !/\bsrc\s*=/.test(attrs) && body.trim());
+            if (!scripts.length) {
+              console.error('FAIL ' + file + ': no inline scripts found');
+              failed = true;
+              continue;
+            }
+            for (let i = 0; i < scripts.length; i++) {
+              try {
+                new vm.Script(scripts[i][2], { filename: file + ' inline script ' + (i + 1) });
+              } catch (error) {
+                console.error('FAIL ' + file + ' inline script ' + (i + 1) + ': ' + error.message);
+                failed = true;
+              }
+            }
+            console.log('CHECKED ' + file + ': ' + scripts.length + ' inline script(s)');
+          }
+          const store = fs.readFileSync('index.html', 'utf8');
+          const admin = fs.readFileSync('maza-admin-app/index.html', 'utf8');
+          for (const token of ['maza_analytics_consent_v1', 'log_maza_analytics_event', 'page_view', 'product_view', 'order_success']) {
+            if (!store.includes(token)) {
+              console.error('FAIL storefront missing expected analytics token: ' + token);
+              failed = true;
+            }
+          }
+          for (const token of ['maza_analytics_events', 'anPageViews', 'anPeakHours', 'anWeeklyReport']) {
+            if (!admin.includes(token)) {
+              console.error('FAIL admin missing expected dashboard token: ' + token);
+              failed = true;
+            }
+          }
+          if (failed) process.exit(1);
+          console.log('PASS required analytics hooks are present');
+          NODE
