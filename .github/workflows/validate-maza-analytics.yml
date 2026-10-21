@@ -1,0 +1,94 @@
+name: Validate MAZA analytics
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/maza-analytics-safe]
+
+jobs:
+  validate-html-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check inline JavaScript syntax and analytics hooks
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const files = ['index.html', 'maza-admin-app/index.html'];
+          let failed = false;
+          for (const file of files) {
+            const html = fs.readFileSync(file, 'utf8');
+            const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
+              .filter(([, attrs, body]) => !/\bsrc\s*=/.test(attrs) && body.trim());
+            if (!scripts.length) {
+              console.error('FAIL ' + file + ': no inline scripts found');
+              failed = true;
+              continue;
+            }
+            for (let i = 0; i < scripts.length; i++) {
+              try {
+                new vm.Script(scripts[i][2], { filename: file + ' inline script ' + (i + 1) });
+              } catch (error) {
+                console.error('FAIL ' + file + ' inline script ' + (i + 1) + ': ' + error.message);
+                failed = true;
+              }
+            }
+            console.log('CHECKED ' + file + ': ' + scripts.length + ' inline script(s)');
+          }
+          const store = fs.readFileSync('index.html', 'utf8');
+          const admin = fs.readFileSync('maza-admin-app/index.html', 'utf8');
+          for (const token of ['mazaEphemeralSessionId', 'log_maza_analytics_event', 'page_view', 'product_view', 'add_to_cart', 'checkout_start', 'order_success']) {
+            if (!store.includes(token)) {
+              console.error('FAIL storefront missing expected analytics token: ' + token);
+              failed = true;
+            }
+          }
+          for (const token of ['maza_analytics_events', 'anPageViews', 'anPeakHours', 'anWeeklyReport', 'anFunnel', 'anStockAlerts', 'anOrderStatuses', 'anReturning', 'anCampaigns']) {
+            if (!admin.includes(token)) {
+              console.error('FAIL admin missing expected dashboard token: ' + token);
+              failed = true;
+            }
+          }
+          // Guardrails for the privacy-minimized analytics implementation.
+          const analyticsStart = store.indexOf('let mazaEphemeralSessionId=null;');
+          const analyticsEnd = store.indexOf('function mazaTrack(', analyticsStart);
+          const analyticsBlock = analyticsStart >= 0 && analyticsEnd > analyticsStart
+            ? store.slice(analyticsStart, store.indexOf('\n}', analyticsEnd) >= 0 ? store.indexOf('\n}', analyticsEnd) + 2 : store.length)
+            : '';
+          for (const token of ['crypto.randomUUID()', 'location.pathname', 'p_session_id:mazaSessionId()']) {
+            if (!analyticsBlock.includes(token)) {
+              console.error('FAIL analytics privacy guard missing: ' + token);
+              failed = true;
+            }
+          }
+          for (const forbidden of ['localStorage', 'sessionStorage', 'document.cookie', 'location.hash']) {
+            if (analyticsBlock.includes(forbidden)) {
+              console.error('FAIL persistent/query data reference found in analytics block: ' + forbidden);
+              failed = true;
+            }
+          }
+          for (const token of ['دون اسم أو هاتف أو عنوان', 'لا يُستخدم معرّف زائر دائم', 'تقريبية']) {
+            if (!admin.includes(token)) {
+              console.error('FAIL admin privacy/accuracy disclaimer missing: ' + token);
+              failed = true;
+            }
+          }
+          // Ensure purchase events are placed around the real order RPC, not merely present as strings.
+          const submitStart = store.indexOf('async function submitOrder(');
+          const submitEnd = store.indexOf('\nfunction toggleLang', submitStart);
+          const submitBlock = submitStart >= 0 && submitEnd > submitStart ? store.slice(submitStart, submitEnd) : '';
+          const rpcPos = submitBlock.indexOf("supabaseClient.rpc('create_maza_order'");
+          const checkoutPos = submitBlock.indexOf("mazaTrack('checkout_start')");
+          const successPos = submitBlock.indexOf("mazaTrack('order_success')");
+          if (!submitBlock || rpcPos < 0 || checkoutPos < 0 || successPos < 0 || !(checkoutPos < rpcPos && rpcPos < successPos)) {
+            console.error('FAIL order analytics must record checkout before the order RPC and success only after it');
+            failed = true;
+          }
+          if (failed) process.exit(1);
+          console.log('PASS required analytics hooks, privacy guardrails, and order-event placement are present');
+          NODE
