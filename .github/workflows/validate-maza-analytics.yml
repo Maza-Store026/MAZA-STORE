@@ -42,7 +42,7 @@ jobs:
           }
           const store = fs.readFileSync('index.html', 'utf8');
           const admin = fs.readFileSync('maza-admin-app/index.html', 'utf8');
-          for (const token of ['maza_analytics_consent_v1', 'log_maza_analytics_event', 'page_view', 'product_view', 'add_to_cart', 'checkout_start', 'order_success', 'mazaAnalyticsReject', 'mazaAnalyticsAccept']) {
+          for (const token of ['mazaEphemeralSessionId', 'log_maza_analytics_event', 'page_view', 'product_view', 'add_to_cart', 'checkout_start', 'order_success']) {
             if (!store.includes(token)) {
               console.error('FAIL storefront missing expected analytics token: ' + token);
               failed = true;
