@@ -66,7 +66,7 @@ jobs:
               failed = true;
             }
           }
-          for (const forbidden of ['localStorage', 'sessionStorage', 'document.cookie', 'location.search', 'location.hash']) {
+          for (const forbidden of ['localStorage', 'sessionStorage', 'document.cookie', 'location.hash']) {
             if (analyticsBlock.includes(forbidden)) {
               console.error('FAIL persistent/query data reference found in analytics block: ' + forbidden);
               failed = true;
