@@ -162,7 +162,16 @@ async function deleteOrderSecure(id){
   try {
     $('orderMsg').textContent='جاري الحذف...';
     await deleteRowsChecked('/rest/v1/order_items?order_id=eq.'+encodeURIComponent(id),'تفاصيل الطلب #'+id,true);
-    const count=await deleteRowsChecked('/rest/v1/orders?id=eq.'+encodeURIComponent(id),'الطلب #'+id);
+    const count=await deleteRowsChecked('/rest/v1/orders?id=eq.'+encodeURIComponent(id),'الطلب #'+id,true);
+    if(count===0){
+      const remaining=await api('/rest/v1/orders?select=id&id=eq.'+encodeURIComponent(id));
+      if(Array.isArray(remaining)&&remaining.length===0){
+        $('orderMsg').textContent='✅ الطلب #'+id+' محذوف بالفعل.';
+        await loadOrders();
+        return;
+      }
+      throw new Error('لم يتم حذف الطلب؛ قد تكون الجلسة غير مخوّلة (AAL2). حدّث الصفحة وأعد تسجيل الدخول.');
+    }
     $('orderMsg').textContent='✅ تم حذف الطلب #'+id+' نهائيًا.';
     await loadOrders();
   } catch(e) {
