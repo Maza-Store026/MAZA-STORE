@@ -181,7 +181,7 @@ function calcOrderShipping(orderId){
  if(!hhdFeeRecords||!Object.keys(hhdFeeRecords).length){out.textContent='افتح أسعار HHD Express واضغط جلب الأسعار أولًا.';return}
  const list=hhdGetList(hhdFeeRecords,'livraison'),fee=hhdFeeMap(list)[wid],field=mode==='stopdesk'?'tarif_stopdesk':'tarif';
  if(!fee||fee[field]===undefined||fee[field]===null||fee[field]===''){out.textContent=wid>58?'⚠️ لم ترجع HHD سعرًا مطابقًا لهذه الولاية الجديدة ('+wid+'). لن نستخدم سعر الولاية الأم بالتخمين؛ راجع أسعار HHD أو أكد الرمز مع الشركة.':'السعر غير موجود في بيانات API؛ تأكد من HHD.';return}
- const shipping=Number(fee[field]),subtotal=Number(order.total||0);
+ const shipping=Number(fee[field]),subtotal=Number(order.subtotal??order.total??0);
  if(!Number.isFinite(shipping)){out.textContent='تعذر قراءة سعر التوصيل.';return}
  out.innerHTML='التوصيل: <b>'+shipping.toLocaleString('ar-DZ')+' دج</b><br>الإجمالي التقديري: <b>'+(subtotal+shipping).toLocaleString('ar-DZ')+' دج</b><br><small>حساب فقط — لم يُحفظ على الطلب.</small>';
 }
