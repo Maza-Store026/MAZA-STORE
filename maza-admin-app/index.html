@@ -165,8 +165,10 @@ function orderShippingHtml(o){
  const id=String(o.id);
  const normalizeWilaya=v=>String(v??'').trim().toLocaleLowerCase('ar').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
  const rawWilaya=String(o.wilaya??'').trim();
- const byName=Object.keys(hhdWilayaNames).find(k=>normalizeWilaya(hhdWilayaNames[k])===normalizeWilaya(rawWilaya)||normalizeWilaya(hhdWilayaNames[k]+' ولاية')===normalizeWilaya(rawWilaya));
- const numericWilaya=/^\\d{1,2}$/.test(rawWilaya)?Number(rawWilaya):0;
+ const codeMatch=rawWilaya.match(/^(\\d{1,2})\\s*(?:[-–—:]|$)/);
+ const numericWilaya=codeMatch?Number(codeMatch[1]):0;
+ const namePart=rawWilaya.replace(/^\\d{1,2}\\s*(?:[-–—:]\\s*)?/,'').trim();
+ const byName=Object.keys(hhdWilayaNames).find(k=>[hhdWilayaNames[k],hhdWilayaNames[k]+' ولاية'].some(n=>normalizeWilaya(n)===normalizeWilaya(namePart)||normalizeWilaya(n)===normalizeWilaya(rawWilaya)));
  const selected=Number(o._shippingWilaya||numericWilaya||(byName?Number(byName):0));
  const options=Object.keys(hhdWilayaNames).map(k=>'<option value="'+k+'" '+(selected===Number(k)?'selected':'')+'>'+k+' — '+hhdWilayaNames[k]+'</option>').join('');
  return '<div style="min-width:190px;display:grid;gap:6px"><select aria-label="ولاية التوصيل للطلب '+esc(id)+'" id="shipWilaya_'+esc(id)+'" onchange="calcOrderShipping('+Number(o.id)+')" style="min-width:180px;padding:6px"><option value="">اختر الولاية</option>'+options+'</select><select id="shipMode_'+esc(id)+'" onchange="calcOrderShipping('+Number(o.id)+')" style="padding:6px"><option value="home">توصيل للمنزل</option><option value="stopdesk">Stopdesk</option></select><div id="shipResult_'+esc(id)+'" style="font-size:12px;line-height:1.6">افتح أسعار HHD واجلب الأسعار أولًا.</div></div>';
