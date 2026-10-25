@@ -101,7 +101,7 @@ async function loadCommunes(){
       daira_name:String(c.daira_name??'').trim(),
       daira_name_ascii:String(c.daira_name_ascii??'').trim()
     }));
-    if(flat.some(c=>!/^\\d{2}$/.test(c.wilaya_code)||Number(c.wilaya_code)<1||Number(c.wilaya_code)>58)) throw new Error('Invalid wilaya code in 58-wilaya dataset');
+    if(flat.some(c=>!/\d{2}$/.test(c.wilaya_code)||Number(c.wilaya_code)<1||Number(c.wilaya_code)>58)) throw new Error('Invalid wilaya code in 58-wilaya dataset');
     if(flat.some(c=>!c.name_ar||!c.name_fr)) throw new Error('Some commune records lack Arabic or French names');
     const codes=new Set(flat.map(c=>c.wilaya_code));
     if(codes.size!==58) throw new Error('Expected 58 wilaya codes; received '+codes.size);
