@@ -162,7 +162,12 @@ async function loadOrderItems(){try{orderItems=await api('/rest/v1/order_items?s
 function itemDetailHtml(it){const raw=String(it.product_name??'');let name=raw,color='',option='';const colorMark=' | اللون: ', optionMark=' | الخيار: ';const ci=name.indexOf(colorMark);if(ci>=0){color=name.slice(ci+colorMark.length);name=name.slice(0,ci)}const oi=color.indexOf(optionMark);if(oi>=0){option=color.slice(oi+optionMark.length);color=color.slice(0,oi)}else{const oi2=name.indexOf(optionMark);if(oi2>=0){option=name.slice(oi2+optionMark.length);name=name.slice(0,oi2)}}return `<div style="padding:8px 0;border-bottom:1px solid #eee"><b>${esc(name)}</b><small>${color?'اللون: '+esc(color)+' · ':''}${option?'المقاس/السعة: '+esc(option)+' · ':''}الكمية: ${esc(it.quantity??0)} · السعر: ${Number(it.price||0).toLocaleString('fr-DZ')} دج</small></div>`}
 function orderDetailsHtml(id){const arr=itemsByOrder[String(id)]||[];if(!arr.length)return '<span class="muted">لا توجد تفاصيل</span>';return '<div style="min-width:220px">'+arr.map(itemDetailHtml).join('')+'</div>'}
 function orderShippingHtml(o){
- const id=String(o.id),selected=Number(o._shippingWilaya||0);
+ const id=String(o.id);
+ const normalizeWilaya=v=>String(v??'').trim().toLocaleLowerCase('ar').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+ const rawWilaya=String(o.wilaya??'').trim();
+ const byName=Object.keys(hhdWilayaNames).find(k=>normalizeWilaya(hhdWilayaNames[k])===normalizeWilaya(rawWilaya)||normalizeWilaya(hhdWilayaNames[k]+' ولاية')===normalizeWilaya(rawWilaya));
+ const numericWilaya=/^\\d{1,2}$/.test(rawWilaya)?Number(rawWilaya):0;
+ const selected=Number(o._shippingWilaya||numericWilaya||(byName?Number(byName):0));
  const options=Object.keys(hhdWilayaNames).map(k=>'<option value="'+k+'" '+(selected===Number(k)?'selected':'')+'>'+k+' — '+hhdWilayaNames[k]+'</option>').join('');
  return '<div style="min-width:190px;display:grid;gap:6px"><select aria-label="ولاية التوصيل للطلب '+esc(id)+'" id="shipWilaya_'+esc(id)+'" onchange="calcOrderShipping('+Number(o.id)+')" style="min-width:180px;padding:6px"><option value="">اختر الولاية</option>'+options+'</select><select id="shipMode_'+esc(id)+'" onchange="calcOrderShipping('+Number(o.id)+')" style="padding:6px"><option value="home">توصيل للمنزل</option><option value="stopdesk">Stopdesk</option></select><div id="shipResult_'+esc(id)+'" style="font-size:12px;line-height:1.6">افتح أسعار HHD واجلب الأسعار أولًا.</div></div>';
 }
