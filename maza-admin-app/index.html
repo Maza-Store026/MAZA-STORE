@@ -53,8 +53,12 @@
 <p class="muted">عرض الأسعار فقط. لا يتم إنشاء طرود أو تعديل الطلبات.</p>
 <button id="refreshHhdFees" class="btn gold">جلب أسعار التوصيل</button>
 <p id="hhdFeesMsg" class="muted">اضغط على «جلب أسعار التوصيل» لقراءة الأسعار الحالية.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><input id="hhdFeeSearch" type="search" placeholder="ابحث باسم الولاية أو رقمها…" style="flex:1;min-width:190px;padding:11px;border-radius:9px;border:1px solid #777;background:#222;color:#fff"><span id="hhdFeeCount" class="muted" style="align-self:center"></span></div>
+<div style="overflow:auto;border:1px solid #454545;border-radius:10px"><table style="width:100%;min-width:660px;border-collapse:collapse;text-align:center;color:inherit"><thead><tr style="background:#28251f"><th style="padding:10px">الولاية</th><th style="padding:10px">توصيل للمنزل</th><th style="padding:10px">Stopdesk</th><th style="padding:10px">الاستلام من المنزل</th><th style="padding:10px">الاستلام Stopdesk</th><th style="padding:10px">التغطية</th></tr></thead><tbody id="hhdFeeRows"><tr><td colspan="6" style="padding:16px">اجلب الأسعار لعرض الجدول.</td></tr></tbody></table></div>
+<details style="margin:12px 0"><summary style="cursor:pointer;padding:10px">عرض البيانات الخام (للتشخيص)</summary>
 <div style="margin:12px 0;padding:14px;border:1px solid #8b3434;background:#351c1c;color:#ffe3df;border-radius:10px"><strong>⚠️ ولايات غير مغطاة حسب تأكيد HHD Express</strong><p style="margin:8px 0">لا تحسب توصيلًا لهذه الولايات عبر HHD Express، ولا تعتبر السعر صفرًا توصيلًا مجانيًا.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><span>33 — إليزي</span><span>37 — تندوف</span><span>50 — برج باجي مختار</span><span>54 — عين ڨزام</span><span>56 — جانت</span></div></div>
 <pre id="hhdFeesData" style="white-space:pre-wrap;overflow-wrap:anywhere;direction:ltr;text-align:left;background:#101010;color:#f5f5f5;padding:12px;border-radius:8px"></pre>
+</details>
 </section>
 <section class="card" id="analyticsPanel">
  <div class="sectionTitle"><h2>📊 تحليلات MAZA STORE</h2><button id="closeAnalytics" class="btn analyticsBack">↩ رجوع إلى لوحة الإدارة</button><div class="row" style="max-width:330px"><select id="analyticsPeriod"><option value="1">اليوم</option><option value="7" selected>آخر 7 أيام</option><option value="30">آخر 30 يومًا</option></select><button id="refreshAnalytics" class="btn gold">تحديث</button></div></div>
@@ -230,6 +234,28 @@ function setAdminView(view){document.body.classList.toggle('orders-view',view===
 $('openHhdFees').onclick=()=>{ $('hhdFeesPanel').style.display='block';document.body.style.overflow='hidden'};
 $('closeHhdFees').onclick=()=>{ $('hhdFeesPanel').style.display='none';document.body.style.overflow=''};
 $('refreshHhdFees').onclick=loadHhdFees;
+const hhdUncovered={33:'إليزي',37:'تندوف',50:'برج باجي مختار',54:'عين ڨزام',56:'جانت'};
+const hhdWilayaNames={1:'أدرار',2:'الشلف',3:'الأغواط',4:'أم البواقي',5:'باتنة',6:'بجاية',7:'بسكرة',8:'بشار',9:'البليدة',10:'البويرة',11:'تمنراست',12:'تبسة',13:'تلمسان',14:'تيارت',15:'تيزي وزو',16:'الجزائر',17:'الجلفة',18:'جيجل',19:'سطيف',20:'سعيدة',21:'سكيكدة',22:'سيدي بلعباس',23:'عنابة',24:'قالمة',25:'قسنطينة',26:'المدية',27:'مستغانم',28:'المسيلة',29:'معسكر',30:'ورقلة',31:'وهران',32:'البيض',33:'إليزي',34:'برج بوعريريج',35:'بومرداس',36:'الطارف',37:'تندوف',38:'تسمسيلت',39:'الوادي',40:'خنشلة',41:'سوق أهراس',42:'تيبازة',43:'ميلة',44:'عين الدفلى',45:'النعامة',46:'عين تموشنت',47:'غرداية',48:'غليزان',49:'تيميمون',50:'برج باجي مختار',51:'أولاد جلال',52:'بني عباس',53:'عين صالح',54:'عين ڨزام',55:'تقرت',56:'جانت',57:'المغير',58:'المنيعة'};
+let hhdFeeRecords=[];
+function hhdGetList(obj,key){const v=obj&&obj[key];return Array.isArray(v)?v:[]}
+function hhdFeeMap(list){const m={};list.forEach(x=>{const id=Number(x.wilaya_id??x.id??x.wilaya);if(Number.isFinite(id))m[id]=x});return m}
+function hhdPrice(x,field){if(!x)return '—';const v=x[field];return v===undefined||v===null||v===''?'—':String(v)+' دج'}
+function renderHhdFees(){
+ const q=($('hhdFeeSearch').value||'').trim().toLocaleLowerCase('ar');
+ const delivery=hhdFeeMap(hhdFeeRecords.livraison||[]),pickup=hhdFeeMap(hhdFeeRecords.pickup||[]);
+ const ids=new Set([...Object.keys(delivery),...Object.keys(pickup)].map(Number));
+ Object.keys(hhdWilayaNames).forEach(k=>ids.add(Number(k)));
+ Object.keys(hhdUncovered).forEach(k=>ids.add(Number(k)));
+ const rows=[...ids].sort((a,b)=>a-b).filter(id=>(hhdWilayaNames[id]||('ولاية '+id)).toLocaleLowerCase('ar').includes(q)||String(id).includes(q));
+ $('hhdFeeRows').innerHTML=rows.map(id=>{
+  const name=hhdWilayaNames[id]||('ولاية '+id),d=delivery[id],p=pickup[id],covered=!hhdUncovered[id]&&!!(d||p);
+  const status=hhdUncovered[id]?'غير مغطاة':covered?'متاحة في بيانات API':'غير مؤكدة — راجع HHD';
+  const cell='padding:9px;border-top:1px solid #444';
+  return '<tr><td style="'+cell+';text-align:right">'+id+' — '+name+'</td><td style="'+cell+'">'+hhdPrice(d,'tarif')+'</td><td style="'+cell+'">'+hhdPrice(d,'tarif_stopdesk')+'</td><td style="'+cell+'">'+hhdPrice(p,'tarif')+'</td><td style="'+cell+'">'+hhdPrice(p,'tarif_stopdesk')+'</td><td style="'+cell+';font-weight:700;color:'+(hhdUncovered[id]?'#ff9b91':covered?'#8fdaa0':'#f0cf7a')+'">'+status+'</td></tr>';
+ }).join('')||'<tr><td colspan="6" style="padding:16px">لا توجد نتائج مطابقة.</td></tr>';
+ $('hhdFeeCount').textContent=rows.length+' ولاية';
+}
+$('hhdFeeSearch').addEventListener('input',renderHhdFees);
 async function loadHhdFees(){
  const msg=$('hhdFeesMsg'),out=$('hhdFeesData'),btn=$('refreshHhdFees');
  msg.textContent='جارٍ جلب الأسعار…';out.textContent='';btn.disabled=true;
@@ -238,7 +264,9 @@ async function loadHhdFees(){
   const res=await fetch(SUPABASE_URL+'/functions/v1/hhd-express',{method:'GET',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+token,'Accept':'application/json'}});
   const data=await res.json().catch(()=>({error:'استجابة غير مفهومة من الخادم'}));
   if(!res.ok||!data.success) throw new Error(data.error||('تعذر جلب الأسعار ('+res.status+')'));
-  out.textContent=JSON.stringify(data.fees,null,2);msg.textContent='تم جلب بيانات الأسعار. راجعها أدناه.';
+  hhdFeeRecords=data.fees||{};
+  out.textContent=JSON.stringify(hhdFeeRecords,null,2);renderHhdFees();
+  msg.textContent='تم جلب الأسعار. الولايات غير المغطاة مميزة، والأسعار غير المتوفرة تظهر كشرطة.';
  }catch(e){msg.textContent='تعذر جلب الأسعار: '+(e.message||'خطأ غير معروف');}
  finally{btn.disabled=false;}
 }
