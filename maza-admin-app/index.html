@@ -289,7 +289,7 @@ async function loadHhdFees(){
   const data=await res.json().catch(()=>({error:'استجابة غير مفهومة من الخادم'}));
   if(!res.ok||!data.success) throw new Error(data.error||('تعذر جلب الأسعار ('+res.status+')'));
   hhdFeeRecords=data.fees||{};
-  out.textContent=JSON.stringify(hhdFeeRecords,null,2);renderHhdFees();if(typeof orders!=='undefined'&&orders.length)renderOrders();
+  out.textContent=JSON.stringify(hhdFeeRecords,null,2);renderHhdFees();if(typeof orders!=='undefined'&&orders.length){renderOrders();orders.forEach(o=>calcOrderShipping(o.id));}
   msg.textContent='تم جلب الأسعار. الولايات غير المغطاة مميزة، والأسعار غير المتوفرة تظهر كشرطة.';
  }catch(e){msg.textContent='تعذر جلب الأسعار: '+(e.message||'خطأ غير معروف');}
  finally{btn.disabled=false;}
