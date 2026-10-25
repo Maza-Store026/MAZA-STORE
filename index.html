@@ -85,31 +85,29 @@ const WILAYAS=['01 أدرار','02 الشلف','03 الأغواط','04 أم ال
 function fillWilayas(){const s=$('wilaya');s.innerHTML='<option value="">'+(ar?'اختر الولاية':'Choisir la wilaya')+'</option>'+WILAYAS.map((x,i)=>`<option value="${esc(x)}">${esc(ar?x:(x.slice(0,2)+' '+(FR_WILAYAS[i]||x.slice(3))) )}</option>`).join('')}
 async function loadCommunes(){
   try {
-    // Load the official 69-wilaya dataset, but expose only the 58 wilayas currently used by HHD API.
-    const url='https://cdn.jsdelivr.net/gh/islam-re/Algeria-wilayas@main/json/wilaya-commune/wilaya-commune.json';
+    // Use a dedicated, complete 58-wilaya dataset so communes from newly promoted wilayas
+    // remain assigned to their former parent wilaya for compatibility with HHD Express.
+    const url='https://raw.githubusercontent.com/wadiemendja/algeria-communes-wilayas/main/algeria-communes-58-wilayas.json';
     const r=await fetch(url,{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status+' while loading commune dataset');
+    if(!r.ok) throw new Error('HTTP '+r.status+' while loading the 58-wilaya commune dataset');
     const j=await r.json();
-    if(!Array.isArray(j)||j.length<58) throw new Error('Wilaya dataset is incomplete');
-    const flat=j.filter(w=>Number(w.code)<=58).flatMap(w=>{
-      const code=String(w.code??'').padStart(2,'0');
-      return (Array.isArray(w.communes)?w.communes:[]).map(c=>({
-        wilaya_code:code,
-        name_ar:String(c.arabic??'').trim(),
-        name_fr:String(c.ascii??'').trim(),
-        commune_name:String(c.arabic??'').trim(),
-        commune_name_ascii:String(c.ascii??'').trim(),
-        daira_name:'', daira_name_ascii:''
-      }));
-    });
-    if(!flat.length) throw new Error('No communes found for the 58-wilaya compatibility list');
+    if(!Array.isArray(j)||j.length<1500) throw new Error('The 58-wilaya commune dataset is incomplete');
+    const flat=j.map(c=>({
+      wilaya_code:String(c.wilaya_code??'').padStart(2,'0'),
+      name_ar:String(c.commune_name??'').trim(),
+      name_fr:String(c.commune_name_ascii??'').trim(),
+      commune_name:String(c.commune_name??'').trim(),
+      commune_name_ascii:String(c.commune_name_ascii??'').trim(),
+      daira_name:String(c.daira_name??'').trim(),
+      daira_name_ascii:String(c.daira_name_ascii??'').trim()
+    }));
+    if(flat.some(c=>!/^\\d{2}$/.test(c.wilaya_code)||Number(c.wilaya_code)<1||Number(c.wilaya_code)>58)) throw new Error('Invalid wilaya code in 58-wilaya dataset');
+    if(flat.some(c=>!c.name_ar||!c.name_fr)) throw new Error('Some commune records lack Arabic or French names');
     const codes=new Set(flat.map(c=>c.wilaya_code));
     if(codes.size!==58) throw new Error('Expected 58 wilaya codes; received '+codes.size);
     for(let i=1;i<=58;i++) if(!codes.has(String(i).padStart(2,'0'))) throw new Error('Missing wilaya code '+i);
-    if(flat.some(c=>!c.name_ar||!c.name_fr)) throw new Error('Some commune records lack Arabic or French names');
-    // The dataset is filtered to HHD's 58-wilaya system; do not validate new-wilaya codes here.
     communes=flat;
-    console.info('MAZA communes validated:',communes.length,'communes, 58 HHD-compatible wilayas, Arabic/French names present');
+    console.info('MAZA communes validated:',communes.length,'communes in the original 58-wilaya structure');
   } catch(e) {
     communes=[];
     console.error('MAZA commune data validation failed; refusing mixed-language fallback',e);
