@@ -107,22 +107,7 @@ async function loadCommunes(){
     if(codes.size!==58) throw new Error('Expected 58 wilaya codes; received '+codes.size);
     for(let i=1;i<=58;i++) if(!codes.has(String(i).padStart(2,'0'))) throw new Error('Missing wilaya code '+i);
     if(flat.some(c=>!c.name_ar||!c.name_fr)) throw new Error('Some commune records lack Arabic or French names');
-    // Correct the Arabic spellings the user explicitly requested for wilaya 67.
-    // Keys use the dataset's exact Latin identity, so records stay attached to their proper wilaya.
-    const aliases67={
-      'Ksar El Boukhari':'قصر البخاري','M’Fatha':'مفاتحة','Saneg':'السانق',
-      'Ain Boucif':'عين بوسيف','Ouled Maaref':'أولاد امعرف','Kef Lakhdar':'الكاف الأخضر',
-      'Sidi Damed':'سيدي دامد','El Ouinet':'العوينات','Chelalet El Adhaoura':'شلالة العذاورة',
-      'Tafraout':'تفراوت','Cheniguel':'شنيقل','Ain Ouksir':'عين القصير',
-      'Aziz':'العزيزية','Derrag':'دراق','Oum El Djellil':'أم الجليل',
-      'Chahbounia':'الشهبونية','Bouaiche':'بوعيش','Boughezoul':'بوغزول',
-      'Ouled Antar':'أولاد عنتر','Ouled Hellal':'أولاد هلال','Boghar':'بوغار'
-    };
-    for(const c of flat){
-      if(c.wilaya_code==='67' && aliases67[c.name_fr]) c.name_ar=c.commune_name=aliases67[c.name_fr];
-    }
-    const count67=flat.filter(c=>c.wilaya_code==='67').length;
-    if(count67!==21) throw new Error('Wilaya 67 should have 21 communes; received '+count67);
+    // The dataset is filtered to HHD's 58-wilaya system; do not validate new-wilaya codes here.
     communes=flat;
     console.info('MAZA communes validated:',communes.length,'communes, 58 HHD-compatible wilayas, Arabic/French names present');
   } catch(e) {
