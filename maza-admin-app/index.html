@@ -153,7 +153,39 @@ async function loadAnalytics(){
  finally{if(requestId===mazaAnalyticsRequestId)refreshButton.disabled=false}
 }
 let mazaAnalyticsRefreshTimer=null;
-async function boot(){await Promise.all([loadOrders(),loadCategories(),loadProducts(),loadInterests()]);await loadHhdFees();if(!mazaAnalyticsRefreshTimer){mazaAnalyticsRefreshTimer=setInterval(()=>{if(!document.hidden&&!$('app').classList.contains('hidden')&&$('analyticsPanel').classList.contains('analytics-open'))loadAnalytics()},60000);}}
+const MAZA_ORDER_SEEN_KEY='maza_admin_last_seen_order_id_v1';
+let mazaOrdersRealtimeChannel=null;
+function mazaLatestOrderId(){return orders.reduce((max,o)=>Math.max(max,Number(o.id)||0),0)}
+async function mazaSetOrderDot(show){
+ try{
+  if(!('setAppBadge' in navigator))return;
+  if(show)await navigator.setAppBadge();
+  else if('clearAppBadge' in navigator)await navigator.clearAppBadge();
+ }catch(e){console.warn('MAZA app badge unavailable:',e)}
+}
+function mazaRefreshOrderDot(){
+ try{
+  const latest=mazaLatestOrderId();
+  const seen=localStorage.getItem(MAZA_ORDER_SEEN_KEY);
+  if(seen===null){localStorage.setItem(MAZA_ORDER_SEEN_KEY,String(latest));mazaSetOrderDot(false);return}
+  mazaSetOrderDot(latest>Number(seen||0));
+ }catch(e){console.warn('MAZA order badge state unavailable:',e)}
+}
+function mazaMarkOrdersSeen(){
+ try{localStorage.setItem(MAZA_ORDER_SEEN_KEY,String(mazaLatestOrderId()))}catch(e){}
+ mazaSetOrderDot(false);
+}
+function mazaStartOrdersRealtime(){
+ if(mazaOrdersRealtimeChannel||!supabaseClient?.channel)return;
+ mazaOrdersRealtimeChannel=supabaseClient.channel('maza-admin-new-orders-badge')
+  .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},payload=>{
+   const id=Number(payload?.new?.id)||0;
+   let seen=0;try{seen=Number(localStorage.getItem(MAZA_ORDER_SEEN_KEY)||0)}catch(e){}
+   if(id>seen)mazaSetOrderDot(true);
+  })
+  .subscribe(status=>{if(status==='CHANNEL_ERROR')console.warn('MAZA orders realtime channel error')});
+}
+async function boot(){await Promise.all([loadOrders(),loadCategories(),loadProducts(),loadInterests()]);mazaRefreshOrderDot();mazaStartOrdersRealtime();await loadHhdFees();if(!mazaAnalyticsRefreshTimer){mazaAnalyticsRefreshTimer=setInterval(()=>{if(!document.hidden&&!$('app').classList.contains('hidden')&&$('analyticsPanel').classList.contains('analytics-open'))loadAnalytics()},60000);}}
 async function loadInterests(){try{interests=await api('/rest/v1/product_interests?select=*&order=created_at.desc');renderInterests();$('interestMsg').textContent=interests.length?'عدد طلبات الإشعار: '+interests.length:''}catch(e){$('interestMsg').textContent='❌ تعذر تحميل طلبات الإشعار: '+e.message;$('interests').innerHTML='<tr><td colspan="8" class="empty">تعذر تحميل طلبات الإشعار. تحقق من صلاحيات جدول product_interests.</td></tr>'}}
 function renderInterests(){const statusText=s=>({new:'جديد',contacted:'تم التواصل',notified:'تم الإشعار',pending:'قيد الانتظار',done:'تم الإشعار'})[String(s||'new').toLowerCase()]||String(s||'جديد');$('interests').innerHTML=interests.map(x=>{const id=Number(x.id);const product=x.product_name||x.name||('منتج رقم '+(x.product_id??'—'));const customer=x.customer_name||x.name_customer||x.full_name||'—';const phone=x.phone||x.customer_phone||'—';return `<tr class="${selectedInterestIds.has(String(x.id))?'selectedRow':''}"><td><input class="rowSelect" type="checkbox" aria-label="تحديد طلب الإشعار ${esc(x.id)}" ${selectedInterestIds.has(String(x.id))?'checked':''} onchange="toggleInterestSelection('${esc(x.id)}',this.checked)"></td><td>${esc(x.id)}</td><td><b>${esc(product)}</b><small>ID: ${esc(x.product_id??'—')}</small></td><td>${esc(customer)}</td><td><a href="tel:${esc(phone)}" style="color:inherit">${esc(phone)}</a></td><td><span class="status">${esc(statusText(x.status))}</span></td><td>${x.created_at?new Date(x.created_at).toLocaleString('ar-DZ'):'—'}</td><td><div class="actions"><button onclick="setInterestStatus(${id},'new')">جديد</button><button onclick="setInterestStatus(${id},'contacted')">تم التواصل</button><button onclick="setInterestStatus(${id},'notified')">تم الإشعار</button><button class="danger" onclick="deleteInterestIdsSecure([${id}])">حذف نهائي</button></div></td></tr>`}).join('')||'<tr><td colspan="8" class="empty">لا توجد طلبات إشعار حاليًا</td></tr>'}
 async function setInterestStatus(id,status){if(!Number.isFinite(id)){alert('رقم الطلب غير صالح');return}try{await api('/rest/v1/product_interests?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status})});const x=interests.find(v=>Number(v.id)===id);if(x)x.status=status;renderInterests();$('interestMsg').textContent='✅ تم تحديث الحالة'}catch(e){alert('❌ تعذر تحديث الحالة: '+e.message)}}
@@ -259,7 +291,7 @@ async function deleteCategory(id){if(!confirm('حذف الفئة؟'))return;try{
 window.renameCategory=renameCategory;window.deleteCategory=deleteCategory;
 $('login').onclick=login;$('mfaStart').onclick=startMfaEnrollment;$('mfaVerifyEnroll').onclick=verifyMfaEnrollment;$('mfaEnrollCode').addEventListener('keydown',e=>{if(e.key==='Enter')verifyMfaEnrollment()});$('mfaLoginCode').addEventListener('keydown',e=>{if(e.key==='Enter')login()});$('refresh').onclick=loadOrders;function installOrdersPullGuard(){let startY=0,startX=0,armed=false;document.addEventListener('touchstart',e=>{if(!document.body.classList.contains('orders-view')||!e.touches||e.touches.length!==1)return;const t=e.target;const sc=t.closest&&t.closest('.tableWrap');if(sc&&sc.scrollTop>0)return;startY=e.touches[0].clientY;startX=e.touches[0].clientX;armed=(window.scrollY<=2&&(!sc||sc.scrollTop<=0));},{passive:true});document.addEventListener('touchmove',e=>{if(!armed||!document.body.classList.contains('orders-view')||!e.touches||e.touches.length!==1)return;const dy=e.touches[0].clientY-startY,dx=e.touches[0].clientX-startX;if(dy>12&&Math.abs(dy)>Math.abs(dx)*1.15&&window.scrollY<=2){if(e.cancelable)e.preventDefault();}if(Math.abs(dy)>35||Math.abs(dx)>35)armed=false;},{passive:false});document.addEventListener('touchend',()=>{armed=false;},{passive:true});document.addEventListener('touchcancel',()=>{armed=false;},{passive:true});}
 installOrdersPullGuard();
-function setAdminView(view){document.body.classList.toggle('orders-view',view==='orders');for(const el of $('app').children){if(el.id==='mfaPanel')continue;if(view==='orders'||view==='interests'){const target=view==='orders'?'ordersPanel':'interestsPanel';if(el.id===target){el.classList.remove('hidden');el.setAttribute('aria-hidden','false')}else{el.classList.add('hidden');if(el.id==='ordersPanel'||el.id==='interestsPanel')el.setAttribute('aria-hidden','true')}}else{if(el.id==='ordersPanel'||el.id==='interestsPanel'){el.classList.add('hidden');el.setAttribute('aria-hidden','true')}else if(el.dataset.mfaGated!=='1'){el.classList.remove('hidden')}}}}$('openOrders').onclick=()=>{setAdminView('orders');$('ordersPanel').classList.add('orders-open');loadOrders();window.scrollTo({top:0,behavior:'smooth'})};$('closeOrders').onclick=()=>{setAdminView('dashboard');$('ordersPanel').classList.remove('orders-open');window.scrollTo({top:0,behavior:'smooth'})};$('openInterests').onclick=()=>{setAdminView('interests');loadInterests();window.scrollTo({top:0,behavior:'smooth'})};$('closeInterests').onclick=()=>{setAdminView('dashboard');window.scrollTo({top:0,behavior:'smooth'})};$('openAnalytics').onclick=()=>{ $('analyticsPanel').classList.add('analytics-open');document.body.style.overflow='hidden';loadAnalytics()};
+function setAdminView(view){document.body.classList.toggle('orders-view',view==='orders');for(const el of $('app').children){if(el.id==='mfaPanel')continue;if(view==='orders'||view==='interests'){const target=view==='orders'?'ordersPanel':'interestsPanel';if(el.id===target){el.classList.remove('hidden');el.setAttribute('aria-hidden','false')}else{el.classList.add('hidden');if(el.id==='ordersPanel'||el.id==='interestsPanel')el.setAttribute('aria-hidden','true')}}else{if(el.id==='ordersPanel'||el.id==='interestsPanel'){el.classList.add('hidden');el.setAttribute('aria-hidden','true')}else if(el.dataset.mfaGated!=='1'){el.classList.remove('hidden')}}}}$('openOrders').onclick=async()=>{setAdminView('orders');$('ordersPanel').classList.add('orders-open');await loadOrders();mazaMarkOrdersSeen();window.scrollTo({top:0,behavior:'smooth'})};$('closeOrders').onclick=()=>{setAdminView('dashboard');$('ordersPanel').classList.remove('orders-open');window.scrollTo({top:0,behavior:'smooth'})};$('openInterests').onclick=()=>{setAdminView('interests');loadInterests();window.scrollTo({top:0,behavior:'smooth'})};$('closeInterests').onclick=()=>{setAdminView('dashboard');window.scrollTo({top:0,behavior:'smooth'})};$('openAnalytics').onclick=()=>{ $('analyticsPanel').classList.add('analytics-open');document.body.style.overflow='hidden';loadAnalytics()};
 $('openHhdFees').onclick=()=>{ $('hhdFeesPanel').style.display='block';document.body.style.overflow='hidden'};
 $('closeHhdFees').onclick=()=>{ $('hhdFeesPanel').style.display='none';document.body.style.overflow=''};
 $('refreshHhdFees').onclick=loadHhdFees;
